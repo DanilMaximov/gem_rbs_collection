@@ -1,1 +1,237 @@
-# Write the type definition here!
+module ActiveFunction
+  type hash = Hash[untyped, untyped]
+
+  interface _Function
+    def performed?:  -> bool
+  end
+
+  class Error < StandardError
+    MESSAGE_TEMPLATE: String
+
+    attr_reader message: String
+
+    def initialize: (String context) -> void
+  end
+
+  class MissingCallbackContext < Error
+  end
+
+  class MissingRouteMethod < Error
+  end
+
+  class NotRenderedError < Error
+  end
+
+  class DoubleRenderError < Error
+  end
+
+  class ParameterMissingError < Error
+  end
+
+  class UnpermittedParameterError < Error
+  end
+
+  class Base
+    extend Functions::Callbacks::ClassMethods
+
+    def self.new: -> Functions::Core
+    def self.process: (Symbol action_name, ?hash request,  ?Functions::Response response) 
+      -> Functions::Response::responseHash
+  end
+
+  module Functions 
+    module Core : Base
+      include _Function
+
+      @performed: bool
+      @action_name: Symbol
+      @request: Hash[Symbol, untyped]
+      @response: Response
+      
+      def dispatch: (Symbol action_name, hash request, Response response) -> Response::responseHash
+
+      private
+
+      def process: (Symbol action) -> void
+    end
+
+
+    module Callbacks : Base, Core
+      interface _Callbacks
+        def callbacks: () -> Hash[Symbol, hash]
+      end
+
+      include _Function
+      extend _Callbacks
+
+      type callbackType = :before | :after
+
+      def self.super: () -> singleton(Core)
+      def process: (*untyped) -> untyped
+
+      private
+
+      def _run_callbacks: (callbackType `type`) -> void
+      def _executable?: (hash options) -> bool
+
+      module ClassMethods
+        include _Callbacks
+        @__callbacks: Hash[Symbol, hash]
+
+        def before_action: (Symbol method, ?hash options) -> void
+        def after_action: (Symbol method, ?hash options) -> void
+        def set_callback: (callbackType type, Symbol method, ?hash options) -> void
+        def inherited: (singleton(Base) subclass) -> void
+      end
+
+      def self.included: (singleton(Base) base) -> void
+    end
+
+    module Rendering : Core
+      include _Function
+
+      DEFAULT_HEADER: Hash[String, String]
+      @performed: bool
+
+      def render: (?status: ::Integer, ?json: hash, ?head: hash) -> void
+    end
+
+    class Response
+      type responseHash = {statusCode: Integer, body: String | nil, headers: Hash[String, String]}
+
+      attr_accessor status: Integer
+      attr_accessor body: String | nil
+      attr_accessor headers: Hash[String, String]
+
+      @committed: bool
+
+      def initialize: (?status: Integer, ?body:  String | nil, ?headers: Hash[String, String]) -> void
+      def to_h: -> responseHash
+      def commit!: -> void
+      def committed?: -> bool
+    end
+
+    module StrongParameters : Core
+      include _Function
+      
+      @_params: Parameters
+
+      def params: -> Parameters
+
+    class Parameters
+      extend Forwardable
+      @permitted: bool
+      @parameters: hash
+
+      def initialize: (hash parameters, ?permitted: bool) -> void
+      def []: (Symbol attribute) -> (Array[Parameters] | Parameters)
+      def require: (Symbol attribute) -> (Array[Parameters] | Parameters)
+      def permit: (*untyped attributes) -> Parameters
+      def to_h: -> hash     
+
+      private
+
+      def nested_attribute: (hash attribute) -> Parameters
+        | (Array[hash] attribute) -> Array[Parameters]
+        | (untyped attribute) -> untyped
+
+      def process_nested: (untyped attr, Symbol method, ?Array[Symbol] options) -> (Parameters | Array[Parameters] | untyped)
+
+      attr_reader parameters: hash   
+    end
+  end
+
+  module AwsEvents
+    module ApiGatewayAuthorizer
+      type event = {
+        type: String, 
+        authorizationToken: String, 
+        methodArn: String
+      }
+    end 
+
+    module apiGatewayV2HTTPEvent
+      type apiGatewayV2HTTPEvent = {
+        version: String,
+        routeKey: String,
+        rawPath: String,
+        rawQueryString: String,
+        cookies: Array[String],
+        headers: Hash[Symbol, String],
+        queryStringParameters: Hash[Symbol, String],
+        pathParameters: Hash[Symbol, String],
+        requestContext: apiGatewayV2HTTPRequestContext,
+        stageVariables: Hash[Symbol, String],
+        body: String,
+        isBase64Encoded: bool
+      }
+
+      type apiGatewayV2HTTPRequestContext = {
+        accountId: String,
+        apiId: String,
+        domainName: String,
+        domainPrefix: String,
+        requestId: String,
+        routeKey: String,
+        stage: String,
+        time: String,
+        timeEpoch: Integer,
+        authorizer: apiGatewayV2HTTPRequestContextAuthorizer,
+        http: apiGatewayV2HTTPRequestContextHTTP,
+        authentication: apiGatewayV2HTTPRequestContextAuthentication,
+      }
+
+      type apiGatewayV2HTTPRequestContextAuthorizer = {
+        jwt: apiGatewayV2HTTPRequestContextAuthorizerJWT,
+        lambda: Hash[Symbol, String],
+        iam: apiGatewayV2HTTPRequestContextAuthorizerIAM,
+      }
+
+      type apiGatewayV2HTTPRequestContextAuthorizerJWT = {
+        claims: Hash[Symbol, String],
+        scopes: Array[String],
+      }
+
+
+      type apiGatewayV2HTTPRequestContextAuthorizerIAM = {
+        accessKey: String,
+        accountId: String,
+        callerId: String,
+        cognitoIdentity: apiGatewayV2HTTPRequestContextAuthorizerIAMCognitoIdentity,
+        principalOrgId: String,
+        userId: String,
+        userArn: String,
+      }
+
+      type apiGatewayV2HTTPRequestContextAuthorizerIAMCognitoIdentity = {
+        identityId: String,
+        identityPoolId: String,
+      }
+
+      type apiGatewayV2HTTPRequestContextHTTP = {
+        method: String,
+        path: String,
+        protocol: String,
+        sourceIp: String,
+        userAgent: String,
+      }
+
+      type apiGatewayV2HTTPRequestContextAuthentication = {
+        clientCerts: apiGatewayV2HTTPRequestContextAuthenticationClientCert
+      }
+
+      type apiGatewayV2HTTPRequestContextAuthenticationClientCert = {
+        clientCertPem: String,
+        subjectDN: String,
+        issuerDN: String,
+        serialNumber: String,
+        validity: apiGatewayV2HTTPRequestContextAuthenticationClientCertValidity,
+      }
+
+      type apiGatewayV2HTTPRequestContextAuthenticationClientCertValidity = {
+        notBefore: String,
+        notAfter: String,
+      }
+    end
+  end
+end

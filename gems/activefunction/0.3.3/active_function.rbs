@@ -1,4 +1,0 @@
-module ActiveFunction
-  class Error < StandardError
-  end
-end

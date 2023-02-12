@@ -133,3 +133,6 @@
 [submodule "gems/concurrent-ruby/1.1/_src"]
 	path = gems/concurrent-ruby/1.1/_src
 	url = https://github.com/ruby-concurrency/concurrent-ruby.git
+[submodule "gems/activefunction/0.3.3/_src"]
+	path = gems/activefunction/0.3.3/_src
+	url = https://github.com/DanilMaximov/activefunction.git
